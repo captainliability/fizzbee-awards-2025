@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fizzbee Awards 2025 – Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#FF8A00; --champagne:#F7E6B5; --navy:#0E2A47; --cream:#FFF9EC;
+}
+body{margin:0;font-family:Nunito;background:var(--cream);color:#203040}
+header{background:linear-gradient(135deg,var(--champagne),#fff);border-bottom:6px solid var(--orange)}
+.wrap{max-width:1000px;margin:0 auto;padding:20px}
+.brand{display:flex;align-items:center;gap:16px}
+.brand img.logo{width:110px;height:110px;object-fit:contain;background:#fff;border-radius:999px;padding:10px;border:3px solid #fff;box-shadow:0 8px 22px rgba(0,0,0,.15)}
+h1{margin:0;font-weight:800}
+.subtitle{margin-top:4px;color:#30465a}
+.hero{margin-top:14px;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.08);border:3px solid #fff}
+.hero img{width:100%;display:block}
+.card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 8px 28px rgba(0,0,0,.08);border:1px solid #eee;margin-top:18px}
+button.reveal{background:var(--orange);color:#fff;font-weight:700;border:none;border-radius:12px;padding:10px 16px;cursor:pointer}
+button.reveal:disabled{opacity:.6;cursor:not-allowed}
+.result{font-size:1.2rem;font-weight:700;margin-top:10px;display:none}
+.footer{margin:32px 0 48px;color:#4a5a6a;font-size:.9rem;text-align:center}
+.confetti-piece{position:fixed;width:10px;height:10px;background:var(--orange);top:0;animation:fall 3s linear infinite}
+@keyframes fall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(100vh) rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <img class="logo" src="logo.png" alt="8D Fizz logo">
+      <div>
+        <h1>Fizzbee Awards 2025</h1>
+        <div class="subtitle">Results Ceremony 🍾🥏</div>
+      </div>
+    </div>
+    <div class="hero"><img src="team.png" alt="8D Fizz team photo"></div>
+  </div>
+</header>
+
+<main class="wrap" id="results"></main>
+<footer class="wrap footer">© 2025 8D Fizz Ultimate Frisbee • Fizzbee Awards</footer>
+
+<audio id="drumroll" src="https://actions.google.com/sounds/v1/human_voices/drum_roll.ogg" preload="auto"></audio>
+<audio id="pop" src="https://actions.google.com/sounds/v1/impacts/glass_drop_and_roll.ogg" preload="auto"></audio>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVuIua9BMKlzWR6gOjrFH7DTkeTFfBD5Aa0TTQSK-iJGvY6T5JxH-IzpisNl6I5QTy/exec";
+const container = document.getElementById('results');
+
+fetch(SCRIPT_URL)
+  .then(r=>r.json())
+  .then(showResults)
+  .catch(err=>{
+    container.textContent = "Error loading results.";
+    console.error(err);
+  });
+
+function showResults(data){
+  for (const [cat, info] of Object.entries(data)){
+    const card = document.createElement('div');
+    card.className='card';
+    const title=document.createElement('h2');
+    title.textContent=cat;
+    const btn=document.createElement('button');
+    btn.textContent='Reveal winner';
+    btn.className='reveal';
+    const result=document.createElement('div');
+    result.className='result';
+    card.append(title,btn,result);
+    container.append(card);
+
+    btn.addEventListener('click',()=>{
+      revealWinner(btn,result,info);
+    });
+  }
+}
+
+function revealWinner(btn,result,info){
+  btn.disabled=true;
+  result.style.display='block';
+  result.textContent='And the winner is...';
+  document.getElementById('drumroll').play();
+  setTimeout(()=>{
+    document.getElementById('pop').play();
+    confetti();
+    let msg='';
+    switch(info.status){
+      case 'low':
+        msg='Not enough votes in this category yet!';
+        break;
+      case 'single':
+        msg=`🥇 ${info.winners[0]}!`;
+        break;
+      case 'tie':
+        msg=`🤝 It’s a tie! ${info.winners.join(', ')}`;
+        break;
+      case 'mass':
+        msg=`Tie – you’re all winners! (${info.winners.join(', ')})`;
+        break;
+      default:
+        msg='No data.';
+    }
+    result.textContent=msg;
+  },2000);
+}
+
+function confetti(){
+  for(let i=0;i<100;i++){
+    const c=document.createElement('div');
+    c.className='confetti-piece';
+    c.style.left=Math.random()*100+'vw';
+    c.style.backgroundColor=['#FF8A00','#F7E6B5','#2EAD6B','#0E2A47'][Math.floor(Math.random()*4)];
+    c.style.animationDuration=(Math.random()*2+2)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),3000);
+  }
+}
+</script>
+</body>
+</html>
