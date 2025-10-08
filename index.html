@@ -15,8 +15,9 @@
     body{margin:0; font-family:Nunito, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--cream); color:#203040}
     header{position:relative; overflow:hidden; background:linear-gradient(135deg, var(--champagne), #fff); border-bottom:6px solid var(--orange)}
     .wrap{max-width:1100px; margin:0 auto; padding:20px}
-    .brand{display:flex; align-items:center; gap:14px}
-    .brand img.logo{width:70px; height:70px; object-fit:contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,.1));}
+    .brand{display:flex; align-items:center; gap:16px}
+    /* Bigger, clearer logo with white badge */
+    .brand img.logo{width:110px; height:110px; object-fit:contain; background:#fff; border-radius:999px; padding:10px; border:3px solid #fff; box-shadow:0 8px 22px rgba(0,0,0,.15)}
     h1{margin:0; font-weight:800; letter-spacing:.5px}
     .subtitle{margin-top:4px; color:#30465a}
     .hero{margin-top:14px; border-radius:18px; overflow:hidden; box-shadow:0 8px 28px rgba(0,0,0,.08); border:3px solid #fff}
@@ -47,7 +48,7 @@
     .toast.error{background:#fff2f2; color:#611; border-color:#f3cccc}
     .grid{display:grid; gap:18px}
     @media(min-width:900px){.grid{grid-template-columns:2fr 1fr}}
-    .cheese{background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.9)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><g fill="%23F9E07F" opacity=".6"><circle cx="20" cy="20" r="6"/><circle cx="80" cy="60" r="8"/><circle cx="140" cy="30" r="5"/><circle cx="180" cy="90" r="7"/></g></svg>'); background-size:cover}
+    .cheese{background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.92)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><g fill="%23F9E07F" opacity=".6"><circle cx="20" cy="20" r="6"/><circle cx="80" cy="60" r="8"/><circle cx="140" cy="30" r="5"/><circle cx="180" cy="90" r="7"/></g></svg>'); background-size:cover}
   </style>
 </head>
 <body>
@@ -57,7 +58,7 @@
         <img class="logo" src="logo.png" alt="8D Fizz logo" />
         <div>
           <h1>Fizzbee Awards 2025</h1>
-          <div class="subtitle">8D Fizz Ultimate • Vote once per category • Pick yourself first</div>
+          <div class="subtitle">8D Fizz Ultimate • Vote once per category • Pick yourself first • You can skip a category</div>
         </div>
       </div>
       <div class="hero"><img src="team.png" alt="8D Fizz team photo" /></div>
@@ -68,7 +69,7 @@
     <section class="card">
       <div class="toolbar">
         <span class="pill">Voting is open</span>
-        <div class="note">Select your name in the first row, then one nominee per category. Hit <strong>Submit</strong> at the bottom.</div>
+        <div class="note">Select your name in the first row, then one nominee per category — or choose <strong>Skip</strong> in the new column. Hit <strong>Submit</strong> at the bottom.</div>
       </div>
 
       <div id="toast" class="toast" role="status"></div>
@@ -91,6 +92,7 @@
       <ul>
         <li>One vote per category.</li>
         <li>You must pick your own name in “Who are you?”</li>
+        <li>If you don't want to vote on a category, choose <em>Skip</em>.</li>
         <li>Once you submit, your device remembers your vote (to discourage duplicate entries).</li>
         <li>Results are stored in our private Google Sheet.</li>
       </ul>
@@ -124,7 +126,9 @@
     ];
 
     // 👉 Paste your Apps Script Web App URL here after you deploy it
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVuIua9BMKlzWR6gOjrFH7DTkeTFfBD5Aa0TTQSK-iJGvY6T5JxH-IzpisNl6I5QTy/exec";
+    const SCRIPT_URL = "REPLACE_WITH_YOUR_APPS_SCRIPT_WEBAPP_URL";
+    const SKIP_VALUE = '__SKIP__';
+    const SKIP_LABEL = 'Skip';
 
     /* -------- Build table dynamically -------- */
     const thead = document.getElementById('thead');
@@ -143,12 +147,15 @@
       // header row
       const headRow = h('tr');
       headRow.appendChild(h('th', {}, ['Award Category']));
+      headRow.appendChild(h('th', {}, [SKIP_LABEL])); // new Skip column
       TEAM.forEach(name => headRow.appendChild(h('th', {}, [name])));
       thead.appendChild(headRow);
 
       // who are you row
       const who = h('tr');
       who.appendChild(h('th', {scope:'row', class:'cat'}, ['Who are you? (select yourself)']));
+      // empty skip cell for this row
+      who.appendChild(h('td', {}, ['—']));
       TEAM.forEach(name => {
         const input = h('input', {type:'radio', name:'voter', value:name, 'aria-label':name});
         who.appendChild(h('td', {}, [input]));
@@ -159,6 +166,9 @@
       CATEGORIES.forEach((cat, i) => {
         const row = h('tr');
         row.appendChild(h('th', {scope:'row', class:'cat'}, [cat]));
+        // Skip option as part of the same radio group
+        const skipInput = h('input', {type:'radio', name:`cat-${i}`, value:SKIP_VALUE, 'aria-label':`${cat} → ${SKIP_LABEL}`});
+        row.appendChild(h('td', {}, [skipInput]));
         TEAM.forEach(name => {
           const input = h('input', {type:'radio', name:`cat-${i}`, value:name, 'aria-label':`${cat} → ${name}`});
           row.appendChild(h('td', {}, [input]));
@@ -191,8 +201,9 @@
       const rows = [];
       CATEGORIES.forEach((cat, i) => {
         const pick = (document.querySelector(`input[name="cat-${i}"]:checked`)||{}).value;
-        if(!pick) throw new Error(`Please vote for: ${cat}`);
-        rows.push({ voter, category: cat, nominee: pick, ts: new Date().toISOString() });
+        if(!pick) throw new Error(`Please choose a nominee or Skip for: ${cat}`);
+        const nominee = (pick === SKIP_VALUE) ? 'Skip' : pick;
+        rows.push({ voter, category: cat, nominee, ts: new Date().toISOString() });
       });
       return {voter, rows};
     }
